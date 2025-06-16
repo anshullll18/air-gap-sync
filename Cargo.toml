@@ -1,0 +1,16 @@
+[package]
+name = "air-gap-sync"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+flate2 = "1.0"                   # For GZIP compression
+aes-gcm = "0.10"                 # For AES-GCM encryption (secure!)
+rand = "0.8"                     # To generate random keys/IVs
+qrcode = "0.13"                  # To generate QR codes
+image = "0.24"                   # To save QR codes as PNG
+serde = { version = "1.0", features = ["derive"] }  # For serialization
+bincode = "1.3"                  # Serialize to binary (small size)
+clap = { version = "4.4", features = ["derive"] }   # For CLI commands
+sha2 = "0.10.9"
+base64 = "0.22.1"
