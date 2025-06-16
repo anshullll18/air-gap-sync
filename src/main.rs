@@ -47,8 +47,9 @@ fn main() {
             println!("Compressed size: {} bytes", compressed.len());
 
             // 🔐 Step 3: Encrypt it
-            let password = "password123"; // You can change this later
-            let (encrypted_data, nonce) = encrypt::encrypt(&compressed, password);
+            use rpassword::prompt_password;
+            let password = prompt_password("Enter password for encryption: ").expect("❌ Failed to read password");
+            let (encrypted_data, nonce) = encrypt::encrypt(&compressed, &password);
 
             println!("Encrypted size: {} bytes", encrypted_data.len());
             println!("Nonce used: {:?}", nonce);
@@ -65,25 +66,39 @@ fn main() {
 
         Commands::Receive { via } => {
             println!("Receiving via: {}", via);
-
             if via == "qr" {
-                // Step 1: Scan chunks
-                let full_payload = qr::read_qr_chunks();
+                // 1️⃣ Read QR chunks (this gives encrypted data)
+                let encrypted = qr::read_qr_chunks();
 
-                // Step 2: Split nonce + encrypted
-                let (nonce, encrypted_data) = full_payload.split_at(12); // 96-bit nonce = 12 bytes
+                // ✅ Extract nonce from first 12 bytes
+                let nonce_bytes: Vec<u8> = encrypted[..12].to_vec();
+                let ciphertext = &encrypted[12..];
 
-                // Step 3: Decrypt
-                let password = "password123"; // Must match sender
-                let decrypted = encrypt::decrypt(encrypted_data, nonce.try_into().unwrap(), password);
+                // 3️⃣ Ask for password
+                println!("🔑 Enter password used for encryption:");
+                let mut password = String::new();
+                std::io::stdin().read_line(&mut password).unwrap();
+                let password = password.trim();
 
-                // Step 4: Decompress
-                let original = compress::decompress_bytes(&decrypted).expect("Decompression failed");
+                // 4️⃣ Decrypt
+                println!("Attempting decryption with nonce: {:?}", nonce_bytes);
+                println!("Encrypted data length: {}", ciphertext.len());
 
-                // Step 5: Save it
-                std::fs::write("received.txt", &original).expect("Failed to save output file");
+                let decrypted = encrypt::decrypt_bytes(ciphertext, password, &nonce_bytes)
+                    .expect("❌ Decryption failed!");
+                println!("✅ Decrypted size: {} bytes", decrypted.len());
 
-                println!("✅ File received and saved as 'received.txt'");
+                // 5️⃣ Decompress
+                let decompressed = compress::decompress_bytes(&decrypted)
+                    .expect("❌ Decompression failed!");
+
+                println!("✅ Decompressed size: {} bytes", decompressed.len());
+
+                // 6️⃣ Write to output file
+                let output_path = "received_output.txt";
+                fs::write(output_path, decompressed).expect("❌ Failed to write file");
+
+                println!("📁 File written to: {}", output_path);
             }
         }
     }

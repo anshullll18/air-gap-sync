@@ -1,5 +1,7 @@
-use aes_gcm::{Aes256Gcm, Key, Nonce}; // AES-GCM with 256-bit key
-use aes_gcm::aead::{Aead, KeyInit, OsRng};
+use aes_gcm::{
+    aead::{Aead, KeyInit, OsRng},
+    Aes256Gcm, Key, Nonce,
+};
 use rand::RngCore;
 use sha2::{Sha256, Digest};
 
@@ -29,4 +31,16 @@ pub fn decrypt(ciphertext: &[u8], nonce_bytes: [u8; 12], password: &str) -> Vec<
     let nonce = Nonce::from_slice(&nonce_bytes);
 
     cipher.decrypt(nonce, ciphertext).expect("decryption failed")
+}
+
+/// Decrypts encrypted bytes using AES-GCM with password and nonce slice
+pub fn decrypt_bytes(data: &[u8], password: &str, nonce_bytes: &[u8]) -> Result<Vec<u8>, String> {
+    let hash = Sha256::digest(password.as_bytes());
+    let key = Key::<Aes256Gcm>::from_slice(&hash);
+    let cipher = Aes256Gcm::new(key);
+    let nonce = Nonce::from_slice(nonce_bytes);
+
+    cipher
+        .decrypt(nonce, data)
+        .map_err(|e| format!("Decryption failed: {:?}", e))
 }
