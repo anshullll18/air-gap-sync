@@ -15,3 +15,5 @@ clap = { version = "4.4", features = ["derive"] }   # For CLI commands
 sha2 = "0.10.9"
 base64 = "0.22.1"
 rpassword = "7.4.0"
+# QR scanning dependencies (no OpenCV needed)
+rqrr = "0.7"                     # Pure Rust QR decoder

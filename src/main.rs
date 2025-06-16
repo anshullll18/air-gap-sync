@@ -1,6 +1,8 @@
 mod encrypt;
 mod compress;
 mod qr;
+mod scanner;  // New scanner module
+
 use std::fs;
 use clap::{Parser, Subcommand};
 
@@ -26,6 +28,8 @@ enum Commands {
     Receive {
         #[arg(long, help = "Transfer method: qr or usb")]
         via: String,
+        #[arg(long, help = "Use enhanced scanner (camera/file/manual)")]
+        enhanced: bool,
     },
 }
 
@@ -54,7 +58,7 @@ fn main() {
             println!("Encrypted size: {} bytes", encrypted_data.len());
             println!("Nonce used: {:?}", nonce);
 
-            // 🧩 Step 9: Combine nonce + encrypted data
+            // 🧩 Step 4: Combine nonce + encrypted data
             let mut full_payload = nonce.to_vec();
             full_payload.extend_from_slice(&encrypted_data);
 
@@ -64,11 +68,22 @@ fn main() {
             }
         }
 
-        Commands::Receive { via } => {
+        Commands::Receive { via, enhanced } => {
             println!("Receiving via: {}", via);
             if via == "qr" {
-                // 1️⃣ Read QR chunks (this gives encrypted data)
-                let encrypted = qr::read_qr_chunks();
+                // Choose between enhanced scanner or original method
+                let encrypted = if *enhanced {
+                    println!("🔍 Using enhanced scanner mode");
+                    scanner::scan_qr_chunks_enhanced()
+                } else {
+                    println!("📝 Using manual paste mode");
+                    qr::read_qr_chunks()
+                };
+
+                if encrypted.len() < 12 {
+                    println!("❌ Received data too short (need at least 12 bytes for nonce)");
+                    return;
+                }
 
                 // ✅ Extract nonce from first 12 bytes
                 let nonce_bytes: Vec<u8> = encrypted[..12].to_vec();
